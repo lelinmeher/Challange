@@ -2,8 +2,12 @@ package com.dws.challenge.web;
 
 import com.dws.challenge.domain.Account;
 import com.dws.challenge.exception.DuplicateAccountIdException;
-import com.dws.challenge.exception.InSufficientBalanceAccountIdException;
+import com.dws.challenge.exception.InvalidAccountDetailsException;
+import com.dws.challenge.exception.InvalidTransferDetailsException;
+import com.dws.challenge.model.TransferCompletionDetails;
+import com.dws.challenge.model.TransferMoneyDetails;
 import com.dws.challenge.service.AccountsService;
+import com.dws.challenge.validate.AccountValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/v1/accounts")
@@ -21,9 +24,12 @@ public class AccountsController {
 
   private final AccountsService accountsService;
 
+  private final AccountValidator accountValidator;
+
   @Autowired
-  public AccountsController(AccountsService accountsService) {
+  public AccountsController(AccountsService accountsService, AccountValidator accountValidator) {
     this.accountsService = accountsService;
+    this.accountValidator = accountValidator;
   }
 
   @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -31,8 +37,9 @@ public class AccountsController {
     log.info("Creating account {}", account);
 
     try {
+      accountValidator.validateAccount(account);
     this.accountsService.createAccount(account);
-    } catch (DuplicateAccountIdException daie) {
+    } catch (DuplicateAccountIdException | InvalidAccountDetailsException daie) {
       return new ResponseEntity<>(daie.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
@@ -46,19 +53,11 @@ public class AccountsController {
   }
 
   @RequestMapping (value = "/transfer",method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-  public String transferMoney(@RequestParam String accountFromId, @RequestParam String accountToId,
-                              @RequestParam BigDecimal amount) {
+  public ResponseEntity<TransferCompletionDetails> transferMoney(@RequestBody TransferMoneyDetails transferMoneyDetails) throws InvalidTransferDetailsException {
 
-    if (accountFromId != null && accountToId != null) {
-      try {
-        this.accountsService.transfer(accountFromId, accountToId, amount);
-      }catch (InSufficientBalanceAccountIdException e){
-        return "InSufficient Balance AccountId";
-      }
-      return "Transfer completed successfully";
-    } else {
-      return "Invalid account(s) specified";
-    }
+        accountValidator.validate(transferMoneyDetails);
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(accountsService.transfer(transferMoneyDetails));
+
   }
-
 }
