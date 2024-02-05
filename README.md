@@ -18,5 +18,6 @@
 
 - We should have an actuator endpoint enabled to check application health and get the information of running applications.
 - We should have logging mechanism with correlation  ID for all the requests. 
-- We can  create BDD test cases to test end to end application with acceptance criteria
-- We can  have acceptance tests and integration tests .
+- We can create BDD test cases to test end to end application with acceptance criteria
+- We can have acceptance tests and integration tests .
+- We can add swagger API to describe the API details
